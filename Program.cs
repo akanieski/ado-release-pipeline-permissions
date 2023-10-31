@@ -1,5 +1,4 @@
-﻿
-using Microsoft.VisualStudio.Services.WebApi;
+﻿using Microsoft.VisualStudio.Services.WebApi;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Security.Client;
@@ -34,12 +33,10 @@ try
     var Graph = await connection.GetClientAsync<GraphHttpClient>();
     var Release = await connection.GetClientAsync<ReleaseHttpClient>();
 
-
     var project = await Projects.GetProject(projectName);
-    var releases = await Release.GetReleaseDefinitionsAsync(project.Id, path);
+    var releases = (await Release.GetReleaseDefinitionsAsync(project.Id)).Where(x => x.Path.StartsWith(path));
     Console.WriteLine($"Project: {project.Name} ({project.Id})");
-    Console.WriteLine($"Releases: {releases.Count()}");
-
+    Console.WriteLine($"Releases: {releases.Count()} under path {path}");
 
     var results = new List<(string userType, string displayName, string userid, string email, string path, int allow, int deny)>();
 
@@ -58,6 +55,7 @@ try
                     // Get the descriptor
                     var descriptors = await Graph.GetDescriptorAsync(id.Id);
                     var members = await Graph.GetUsersRecursive(descriptors.Value.ToString());
+
                     foreach (var member in members)
                     {
                         if (member.StartsWith("aadsp"))

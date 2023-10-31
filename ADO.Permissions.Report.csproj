@@ -10,10 +10,11 @@
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.57.0" />
+    <PackageReference Include="Microsoft.TeamFoundation.DistributedTask.Common.Contracts" Version="19.230.0-preview" />
     <PackageReference Include="Microsoft.TeamFoundationServer.Client" Version="16.205.1" />
     <PackageReference Include="Microsoft.VisualStudio.Services.Client" Version="19.230.0-preview" />
     <PackageReference Include="Microsoft.VisualStudio.Services.InteractiveClient" Version="16.205.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Services.Release.Client" Version="16.205.1" />
+    <PackageReference Include="Microsoft.VisualStudio.Services.Release.Client" Version="19.230.0-preview" />
   </ItemGroup>
 
 </Project>
