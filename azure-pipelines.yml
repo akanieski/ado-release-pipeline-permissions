@@ -1,6 +1,16 @@
 parameters:
-- name: orgUrl
+- name: org
   type: string
+- name: auth
+  type: string
+- name: out
+  type: string
+  default: output.csv
+- name: project
+  type: string
+- name: releasesPath
+  type: string
+  default: '/'
 
 trigger: none
 
@@ -16,5 +26,10 @@ steps:
     includePreviewVersions: true
 - task: DotNetCoreCLI@2
   inputs:
-    command: 'run'
-    arguments: '--orgurl ${{ parameters.orgurl }}'
+    command: 'run'    
+    arguments: --org ${{ parameters.orgurl }} --auth ${{ parameters.auth }} --out ${{ parameters.out }} --project ${{ parameters.project }} --releases-path ${{ parameters.releasesPath }}
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '${{ parameters.out }}'
+    artifact: 'Output'
+    publishLocation: 'pipeline'
