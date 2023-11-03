@@ -10,7 +10,7 @@ parameters:
   type: string
 - name: releasesPath
   type: string
-  default: '/'
+  default: '/Subfolder'
 
 trigger: none
 
