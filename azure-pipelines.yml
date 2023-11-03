@@ -27,7 +27,7 @@ steps:
 - task: DotNetCoreCLI@2
   inputs:
     command: 'run'    
-    arguments: --org ${{ parameters.org }} --auth ${{ parameters.auth }} --out ${{ parameters.out }} --project ${{ parameters.project }} --releases-path ${{ parameters.releasesPath }}
+    arguments: -- --org ${{ parameters.org }} --auth ${{ parameters.auth }} --out ${{ parameters.out }} --project ${{ parameters.project }} --releases-path ${{ parameters.releasesPath }}
 - task: PublishPipelineArtifact@1
   inputs:
     targetPath: '${{ parameters.out }}'
