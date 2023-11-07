@@ -37,7 +37,7 @@ jobs:
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - run: |
         dotnet publish ${{ env.Project_Path}} -c Release -r win-x64 -o ./built
-        zip -r app.zip ./build
+        Compress-Archive -DestinationPath app.zip -Path ./build
 
     # Upload the package
     - name: Upload build artifacts
