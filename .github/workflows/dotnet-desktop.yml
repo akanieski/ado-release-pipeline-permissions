@@ -36,7 +36,7 @@ jobs:
 
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - run: |
-        dotnet publish ${{ env.Project_Path}} -c Release -r win10-x64 -o ./built
+        dotnet publish ${{ env.Project_Path}} -c Release -r win-x64 -o ./built
         zip -r app.zip ./build
 
     # Upload the package
