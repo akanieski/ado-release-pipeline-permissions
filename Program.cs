@@ -41,6 +41,7 @@ try
     var results = new List<(string userType, string displayName, string userid, string email, string path, int allow, int deny)>();
     var ids = new Dictionary<string, Identity>();
     var memberships = new Dictionary<string, List<string>>();
+    var graphUsers = new Dictionary<string, GraphUser>();
     foreach (var release in releases)
     {
         var releaseAcls = await Security.QueryAccessControlListsAsync(guid, $"{project.Id}{release.Path.Replace("\\", "/").EnsureEndsWith("/")}{release.Id}", null, true, true);
@@ -70,7 +71,8 @@ try
                         }
                         else
                         {
-                            var graph_user = await Graph.GetUserAsync(member);
+                            var graph_user = graphUsers.ContainsKey(member) ? graphUsers[member] : await Graph.GetUserAsync(member);
+                            graphUsers.TryAdd(member, graph_user);
                             results.Add(("UserMember",graph_user.DisplayName, graph_user.Descriptor.Identifier, graph_user.MailAddress, x.Token, y.Value.ExtendedInfo.EffectiveAllow, y.Value.ExtendedInfo.EffectiveDeny));
                         }
                     }
@@ -89,7 +91,15 @@ try
         }
     }
 
-    var flattened = results.DistinctBy(x => x.userid+ "|" + x.path).ToList();
+    var flattened = results.GroupBy(x => x.userid + "|" + x.path).Select(x => (
+        userType: x.FirstOrDefault().userType,
+        displayName: x.FirstOrDefault().displayName,
+        userid: x.FirstOrDefault().userid,
+        email: x.FirstOrDefault().email,
+        path: x.FirstOrDefault().path,
+        allow: x.Sum(y => y.allow),
+        deny: x.Sum(y => y.deny)
+    )).ToList();
 
     var ns = await Security.QuerySecurityNamespacesAsync(guid);
     csv.WriteField("User Type");
