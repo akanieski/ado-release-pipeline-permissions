@@ -39,7 +39,8 @@ try
     Console.WriteLine($"Releases: {releases.Count()} under path {path}");
 
     var results = new List<(string userType, string displayName, string userid, string email, string path, int allow, int deny)>();
-
+    var ids = new Dictionary<string, Identity>();
+    var memberships = new Dictionary<string, List<string>>();
     foreach (var release in releases)
     {
         var releaseAcls = await Security.QueryAccessControlListsAsync(guid, $"{project.Id}{release.Path.Replace("\\", "/").EnsureEndsWith("/")}{release.Id}", null, true, true);
@@ -48,13 +49,17 @@ try
             x.Token = x.Token.Replace("/" + release.Id, "/" + release.Name);
             foreach (var y in x.AcesDictionary)
             {
-                var id = (await Identity.ReadIdentitiesAsync(descriptors: new IdentityDescriptor[] { IdentityDescriptor.FromString(y.Key.ToString()) })).FirstOrDefault();
+                var id = ids.ContainsKey(y.Key.ToString()) ? ids[y.Key.ToString()] 
+                    : (await Identity.ReadIdentitiesAsync(descriptors: new IdentityDescriptor[] { IdentityDescriptor.FromString(y.Key.ToString()) })).FirstOrDefault();
+                ids.TryAdd(y.Key.ToString(), id);
                 if (id != null && id.IsContainer)
                 {
                     // Its a Team/Group
                     // Get the descriptor
                     var descriptors = await Graph.GetDescriptorAsync(id.Id);
-                    var members = await Graph.GetUsersRecursive(descriptors.Value.ToString());
+                    var members = memberships.ContainsKey(descriptors.Value.ToString()) ? memberships[descriptors.Value.ToString()] 
+                        : await Graph.GetUsersRecursive(descriptors.Value.ToString());
+                    memberships.TryAdd(descriptors.Value.ToString(), members);
 
                     foreach (var member in members)
                     {
@@ -84,6 +89,8 @@ try
         }
     }
 
+    var flattened = results.DistinctBy(x => x.userid+ "|" + x.path).ToList();
+
     var ns = await Security.QuerySecurityNamespacesAsync(guid);
     csv.WriteField("User Type");
     csv.WriteField("Release Pipeline");
@@ -96,7 +103,7 @@ try
     }
     csv.NextRecord();
 
-    foreach (var r in results)
+    foreach (var r in flattened)
     {
         csv.WriteField(r.userType);
         csv.WriteField(r.path.Replace(project.Id.ToString(), project.Name));
