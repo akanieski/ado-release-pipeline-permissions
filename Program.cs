@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Services.ReleaseManagement.WebApi.Clients;
 using Microsoft.VisualStudio.Services.Graph.Client;
 using Microsoft.VisualStudio.Services.Identity;
 using System.Globalization;
+using System.Text.Json;
 
 try
 {
@@ -44,16 +45,27 @@ try
     var graphUsers = new Dictionary<string, GraphUser>();
     foreach (var release in releases)
     {
+        Console.WriteLine($"Processing release {release.Name} ({release.Id})");
         var releaseAcls = await Security.QueryAccessControlListsAsync(guid, $"{project.Id}{release.Path.Replace("\\", "/").EnsureEndsWith("/")}{release.Id}", null, true, true);
+        Console.WriteLine($"Release: {release.Name} ({release.Id})");
+        //Console.WriteLine($"ACLs: {JsonSerializer.Serialize(releaseAcls.Select( x => new {Token = x.Token , ACLs = x.AcesDictionary.Values}), new JsonSerializerOptions { WriteIndented = true })}");
         foreach (var x in releaseAcls)
         {
+            //Console.WriteLine($"Processing token {x.Token}");
             x.Token = x.Token.Replace("/" + release.Id, "/" + release.Name);
             foreach (var y in x.AcesDictionary)
             {
                 var id = ids.ContainsKey(y.Key.ToString()) ? ids[y.Key.ToString()] 
                     : (await Identity.ReadIdentitiesAsync(descriptors: new IdentityDescriptor[] { IdentityDescriptor.FromString(y.Key.ToString()) })).FirstOrDefault();
+                if (id == null) {
+                    Console.WriteLine($"Unable to find identity {y.Key.ToString()}");
+                    continue;
+                }
                 ids.TryAdd(y.Key.ToString(), id);
-                if (id != null && id.IsContainer)
+                
+                Console.WriteLine($"Processing identity {id.DisplayName} ({id.Id})");
+                //Console.WriteLine(JsonSerializer.Serialize(id, new JsonSerializerOptions { WriteIndented = true }));
+                if (id.IsContainer)
                 {
                     // Its a Team/Group
                     // Get the descriptor
@@ -61,7 +73,7 @@ try
                     var members = memberships.ContainsKey(descriptors.Value.ToString()) ? memberships[descriptors.Value.ToString()] 
                         : await Graph.GetUsersRecursive(descriptors.Value.ToString());
                     memberships.TryAdd(descriptors.Value.ToString(), members);
-
+                    Console.WriteLine($"Found {members.Count()} members in {id.DisplayName}");
                     foreach (var member in members)
                     {
                         if (member.StartsWith("aadsp"))
@@ -87,9 +99,14 @@ try
                     // It's a user
                     results.Add(("User", id.DisplayName, id.Id.ToString().ToLowerInvariant(), id.Properties["Mail"].ToString(), x.Token, y.Value.ExtendedInfo.EffectiveAllow, y.Value.ExtendedInfo.EffectiveDeny));
                 }
+                else {
+                    Console.WriteLine($"Unknown identity type: {y.Key.ToString()}");
+                }
             }
         }
     }
+
+
 
     var flattened = results.GroupBy(x => x.userid + "|" + x.path).Select(x => (
         userType: x.FirstOrDefault().userType,
@@ -97,8 +114,8 @@ try
         userid: x.FirstOrDefault().userid,
         email: x.FirstOrDefault().email,
         path: x.FirstOrDefault().path,
-        allow: x.Sum(y => y.allow),
-        deny: x.Sum(y => y.deny)
+        allow: x.Select(y => y.allow).SumBitwise(),
+        deny: x.Select(x => x.deny).SumBitwise()
     )).ToList();
 
     var ns = await Security.QuerySecurityNamespacesAsync(guid);
@@ -107,6 +124,8 @@ try
     csv.WriteField("Principal Name");
     csv.WriteField("Principal Id");
     csv.WriteField("Email");
+    csv.WriteField("FlatAllow");
+    csv.WriteField("FlatDeny");
     foreach (var action in ns.First().Actions)
     {
         csv.WriteField($"{action.DisplayName} <{action.Bit}>");
@@ -120,6 +139,8 @@ try
         csv.WriteField(r.displayName);
         csv.WriteField(r.userid);
         csv.WriteField(r.email);
+        csv.WriteField(r.allow);
+        csv.WriteField(r.deny);
         foreach (var action in ns.First().Actions)
         {
             var allowed = r.allow.HasFlag(action.Bit);

@@ -1,9 +1,20 @@
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.Graph;
 using Microsoft.VisualStudio.Services.Graph.Client;
+    using System.Collections.Generic;
 
 public static class Ext
 {
+
+    public static int SumBitwise(this IEnumerable<int> numbers)
+    {
+        int sum = 0;
+        foreach (var number in numbers)
+        {
+            sum |= number;
+        }
+        return sum;
+    }
     public static string GetParameter(this string[] array, string value, string defaultValue = null, bool throwOnNull = true)
     {
         int index = Array.IndexOf(array, value);
