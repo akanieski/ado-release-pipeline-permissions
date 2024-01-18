@@ -75,6 +75,11 @@ public static class Ext
             {
                 await Graph.GetUsersRecursive(item.MemberDescriptor, data);
             }
+            else
+            {
+                data.Add(item.MemberDescriptor.ToString());
+                Console.WriteLine(item.MemberDescriptor.ToString());
+            }
         }
         return data;
     }
